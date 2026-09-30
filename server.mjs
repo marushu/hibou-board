@@ -38,30 +38,31 @@ const server=http.createServer(async(req,res)=>{
  try{
  const allowed=cfg.mode==='demo'?/^127\.0\.0\.1:\d+$/.test(req.headers.host||''):req.headers.host===new URL(cfg.origin).host;
  if(!allowed)return send(403,{error:'Host rejected'});
+ const {pathname}=new URL(req.url,'http://127.0.0.1');
  const expectedOrigin=cfg.mode==='demo'?`http://${req.headers.host}`:cfg.origin;
  if(req.method==='POST'&&req.headers.origin&&req.headers.origin!==expectedOrigin)return send(403,{error:'Origin rejected'});
- if(req.method==='GET'&&req.url==='/api/auth/session'){
+ if(req.method==='GET'&&pathname==='/api/auth/session'){
   if(cfg.mode==='demo')return send(200,{mode:'demo'});
   const p=auth.identify(req);return p?.kind==='human'?send(200,{mode:'production',csrf:p.csrf}):send(401,{error:'Sign in required'});
  }
- if(cfg.mode==='production'&&req.method==='POST'&&/^\/api\/auth\/(register|login)\/(options|verify)$/.test(req.url)){
+ if(cfg.mode==='production'&&req.method==='POST'&&/^\/api\/auth\/(register|login)\/(options|verify)$/.test(pathname)){
   if(req.headers.origin!==cfg.origin)return send(403,{error:'Origin required'});
-  const body=await jsonBody(req),[,name,step]=req.url.match(/^\/api\/auth\/(register|login)\/(options|verify)$/),kind=name==='register'?'register':'login';
+  const body=await jsonBody(req),[,name,step]=pathname.match(/^\/api\/auth\/(register|login)\/(options|verify)$/),kind=name==='register'?'register':'login';
   try{
    if(step==='options')return send(200,await auth.options(kind,req.headers['x-enrollment-token']));
    const session=await auth.verify(kind,body,req.headers['x-enrollment-token']);res.setHeader('Set-Cookie',auth.cookie(session.token));return send(200,{csrf:session.csrf});
   }catch{return send(401,{error:'Authentication failed'});}
  }
- if(cfg.mode==='production'&&req.url.startsWith('/api/')){
+ if(cfg.mode==='production'&&pathname.startsWith('/api/')){
   const scope=req.method==='GET'?'board:read':'board:write';
   const principal=auth.authorize(req,scope);if(!principal)return send(403,{error:'Authorization required'});
-  if(req.url==='/api/auth/logout'&&req.method==='POST'){
+  if(pathname==='/api/auth/logout'&&req.method==='POST'){
    if(principal.kind!=='human')return send(403,{error:'Human session required'});
    store.db.prepare('DELETE FROM sessions WHERE digest=?').run(principal.digest);res.setHeader('Set-Cookie','__Host-hibou=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0');return send(200,{ok:true});
   }
  }
- if(req.method==='GET'&&req.url==='/api/state')return send(200,state);
- if(req.method==='POST'&&req.url==='/api/action'){
+ if(req.method==='GET'&&pathname==='/api/state')return send(200,state);
+ if(req.method==='POST'&&pathname==='/api/action'){
  const action=await jsonBody(req);
  const run=async()=>{if(action.revision!==state.revision)return send(409,{error:'別の画面で更新されました。再読み込みしてください。'});const n=structuredClone(state),adapter=new MockCalendar(n.events);
  try{
@@ -75,8 +76,8 @@ const server=http.createServer(async(req,res)=>{
  tail=tail.then(run,run);await tail;return;
  }
  const files={'/':'index.html','/app.mjs':'app.mjs','/login.mjs':'login.mjs','/metadata.mjs':'metadata.mjs','/core.mjs':'core.mjs','/portfolio.mjs':'portfolio.mjs','/style.css':'style.css','/manifest.webmanifest':'manifest.webmanifest','/sw.mjs':'sw.mjs','/icon.svg':'icon.svg','/offline.html':'offline.html'};
- if(req.method!=='GET'||!files[req.url])return send(404,{error:'Not found'});
- const f=files[req.url],type=f.endsWith('css')?'text/css':f.endsWith('mjs')?'text/javascript':f.endsWith('svg')?'image/svg+xml':f.endsWith('webmanifest')?'application/manifest+json':'text/html';
+ if(req.method!=='GET'||!files[pathname])return send(404,{error:'Not found'});
+ const f=files[pathname],type=f.endsWith('css')?'text/css':f.endsWith('mjs')?'text/javascript':f.endsWith('svg')?'image/svg+xml':f.endsWith('webmanifest')?'application/manifest+json':'text/html';
  const bytes=await readFile(root+f);res.writeHead(200,{'Content-Type':type});res.end(bytes);
  }catch(e){send(e.status||500,{error:e.status?e.message:'Request failed'});}
 });

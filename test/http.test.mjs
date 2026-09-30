@@ -8,8 +8,11 @@ test('local HTTP lifecycle: schema migration, assets, edits, mock sync, CAS and 
  try{
  for(const f of ['config.mjs','schema.mjs','auth.mjs','runtime-import.mjs','login.mjs','manifest.webmanifest','sw.mjs','icon.svg','offline.html','server.mjs','core.mjs','metadata.mjs','planning-import.mjs','portfolio.mjs','seed.mjs','index.html','app.mjs','style.css'])await copyFile(new URL(f,root),dir+'/'+f);
  let base=await start();for(const f of ['/','/app.mjs','/core.mjs','/metadata.mjs','/portfolio.mjs','/style.css'])assert.equal((await fetch(base+f)).status,200);
- let s=await(await fetch(base+'/api/state')).json();assert.equal(s.schemaVersion,3);assert.equal(s.projects.length,4);assert.equal(s.projects.at(-1).stream,'operations');
- const send=async action=>fetch(base+'/api/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:s.revision,...action})});
+ for(const path of ['/?utm_source=chatgpt.com','/app.mjs?v=1','/style.css?v=1'])assert.equal((await fetch(base+path)).status,200);
+ assert.deepEqual(await(await fetch(base+'/api/auth/session?x=1')).json(),{mode:'demo'});
+ assert.equal((await fetch(base+'/missing?x=1')).status,404);
+ let s=await(await fetch(base+'/api/state?x=1')).json();assert.equal(s.schemaVersion,3);assert.equal(s.projects.length,4);assert.equal(s.projects.at(-1).stream,'operations');
+ const send=async action=>fetch(base+'/api/action?x=1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({revision:s.revision,...action})});
  let r=await send({type:'edit',id:'atlas-v1-plan-direction',patch:{assignee:'Smoke fixture'}});assert.equal(r.status,200);s=await r.json();
  r=await send({type:'sync'});assert.equal(r.status,200);s=await r.json();assert.equal(s.queue.length,0);assert.equal(Object.keys(s.links).length,1);assert.equal(s.events['unrelated-event'].etag,'1');
  assert.equal((await send({type:'sync',revision:-1})).status,409);assert.equal((await fetch(base+'/data/state.json')).status,404);

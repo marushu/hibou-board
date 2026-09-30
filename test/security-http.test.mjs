@@ -9,7 +9,7 @@ import {once} from 'node:events';
 import {openStore} from '../schema.mjs';
 import {Auth,digest} from '../auth.mjs';
 const origin='https://board.example';
-test('production HTTP auth, CSRF, service scope, request limits, private paths and security headers',async()=>{
+for(const query of ['', '?x=1'])test('production HTTP auth, CSRF, service scope, request limits, private paths and security headers '+(query||'(no query)'),async()=>{
  const dir=await mkdtemp(join(tmpdir(),'hibou-security-'));
  const token='synthetic-http-service-test-input';
  await writeFile(join(dir,'services.json'),JSON.stringify([{id:'fixture-reader',tokenHash:digest(token),scopes:['board:read'],expires:Date.now()+60000}]));
@@ -17,7 +17,7 @@ test('production HTTP auth, CSRF, service scope, request limits, private paths a
  const child=spawn(process.execPath,['server.mjs'],{cwd:new URL('../',import.meta.url),env:{PATH:process.env.PATH,PORT:'0',HIBOU_MODE:'production',HIBOU_ORIGIN:origin,HIBOU_RP_ID:'board.example',HIBOU_DATA_DIR:dir,HIBOU_SERVICES_FILE:join(dir,'services.json')},stdio:['ignore','pipe','pipe']});
  try{
   const base=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Startup timeout')),10000);child.once('exit',()=>{clearTimeout(timer);reject(Error('Startup failed'));});child.stdout.on('data',b=>{const m=String(b).match(/http:\/\/127\.0\.0\.1:\d+/);if(m){clearTimeout(timer);resolve(m[0]);}});});
-  const request=(path,options={})=>new Promise((resolve,reject)=>{const req=http.request(base+path,{method:options.method||'GET',headers:{Host:'board.example',...options.headers}},res=>{let body='';res.on('data',b=>body+=b);res.on('end',()=>resolve({status:res.statusCode,headers:{get:k=>res.headers[k]},json:async()=>JSON.parse(body)}));});req.on('error',reject);req.end(options.body);});
+  const request=(path,options={})=>new Promise((resolve,reject)=>{const req=http.request(base+path+query,{method:options.method||'GET',headers:{Host:'board.example',...options.headers}},res=>{let body='';res.on('data',b=>body+=b);res.on('end',()=>resolve({status:res.statusCode,headers:{get:k=>res.headers[k]},json:async()=>JSON.parse(body)}));});req.on('error',reject);req.end(options.body);});
   const cookie=`__Host-hibou=${session.token}`;
   let r=await request('/');assert.equal(r.status,200);for(const key of ['content-security-policy','strict-transport-security','x-frame-options','x-content-type-options','referrer-policy'])assert.ok(r.headers.get(key));
   assert.equal((await fetch(base+'/')).status,403);
