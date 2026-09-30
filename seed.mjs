@@ -1,0 +1,6 @@
+export function seed(){
+ const lanes=Array.from({length:4},(_,i)=>`Lane ${i+1} · 名称未確認`);
+ const tasks=lanes.map((lane,i)=>({id:`atlas-sample-${i+1}`,project:'atlas',title:['4レーン計画の照合','実装スライス（サンプル）','レビュー（サンプル）','リリース準備（サンプル）'][i],lane,assignee:i===0?'Owner':'Agent（仮）',start:['2054-09-30','2054-10-05','2054-10-19','2054-10-26'][i],end:['2054-10-02','2054-10-16','2054-10-23','2054-10-30'][i],status:['TODO','DOING','REVIEW','TODO'][i],remaining:[1,8,3,4][i],dependencies:i?[`atlas-sample-${i}`]:[],blocker:i===0?'既存スケジュールの確認待ち':'',decision:i===0?'正式な4レーン名・担当・日程を確認する':'',sample:true,version:1}));
+ tasks.push({id:'atlas-release',project:'atlas',title:'Atlas リリース目標',lane:lanes[3],assignee:'Owner',start:'2054-11-02',end:'2054-11-02',status:'TODO',remaining:0,dependencies:[],blocker:'',decision:'',milestone:true,sample:false,version:1});
+ return {revision:0,projects:[{id:'atlas',name:'Atlas',description:'モデルケース / 計画要照合',active:true,lanes},{id:'beacon',name:'Beacon',description:'予定・活動状況 未登録',active:null,lanes:['未分類']},{id:'workshop',name:'Workshop',description:'予定・活動状況 未登録',active:null,lanes:['未分類']}],tasks,queue:[],links:{},conflicts:{},events:{'unrelated-event':{id:'unrelated-event',summary:'Unrelated fixture',start:'2054-10-01',end:'2054-10-02',etag:'1'}},audit:[]};
+}

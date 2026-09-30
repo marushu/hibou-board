@@ -1,0 +1,47 @@
+import http from 'node:http';
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,rm,writeFile,readFile} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {spawn} from 'node:child_process';
+import {once} from 'node:events';
+import {openStore} from '../schema.mjs';
+import {Auth,digest} from '../auth.mjs';
+const origin='https://board.example';
+test('production HTTP auth, CSRF, service scope, request limits, private paths and security headers',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'hibou-security-'));
+ const token='synthetic-http-service-test-input';
+ await writeFile(join(dir,'services.json'),JSON.stringify([{id:'fixture-reader',tokenHash:digest(token),scopes:['board:read'],expires:Date.now()+60000}]));
+ const store=openStore(join(dir,'board.db'));store.db.prepare("INSERT INTO principals VALUES('owner','human')").run();const auth=new Auth(store.db,{origin,sessionMs:60000});const session=auth.createSession('owner');store.close();
+ const child=spawn(process.execPath,['server.mjs'],{cwd:new URL('../',import.meta.url),env:{PATH:process.env.PATH,PORT:'0',HIBOU_MODE:'production',HIBOU_ORIGIN:origin,HIBOU_RP_ID:'board.example',HIBOU_DATA_DIR:dir,HIBOU_SERVICES_FILE:join(dir,'services.json')},stdio:['ignore','pipe','pipe']});
+ try{
+  const base=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('Startup timeout')),10000);child.once('exit',()=>{clearTimeout(timer);reject(Error('Startup failed'));});child.stdout.on('data',b=>{const m=String(b).match(/http:\/\/127\.0\.0\.1:\d+/);if(m){clearTimeout(timer);resolve(m[0]);}});});
+  const request=(path,options={})=>new Promise((resolve,reject)=>{const req=http.request(base+path,{method:options.method||'GET',headers:{Host:'board.example',...options.headers}},res=>{let body='';res.on('data',b=>body+=b);res.on('end',()=>resolve({status:res.statusCode,headers:{get:k=>res.headers[k]},json:async()=>JSON.parse(body)}));});req.on('error',reject);req.end(options.body);});
+  const cookie=`__Host-hibou=${session.token}`;
+  let r=await request('/');assert.equal(r.status,200);for(const key of ['content-security-policy','strict-transport-security','x-frame-options','x-content-type-options','referrer-policy'])assert.ok(r.headers.get(key));
+  assert.equal((await fetch(base+'/')).status,403);
+  assert.equal((await request('/api/state')).status,403);
+  assert.equal((await request('/api/auth/session')).status,401);
+  r=await request('/api/auth/session',{headers:{Cookie:cookie}});assert.equal((await r.json()).csrf,session.csrf);
+  r=await request('/api/state',{headers:{Authorization:'Bearer '+token}});assert.equal(r.status,200);const state=await r.json();
+  const action={type:'edit',id:'atlas-v1-plan-direction',revision:state.revision,patch:{title:'HTTP fixture edit'}};
+  const post={method:'POST',headers:{'Content-Type':'application/json',Cookie:cookie,Origin:origin},body:JSON.stringify(action)};
+  assert.equal((await request('/api/action',post)).status,403);
+  assert.equal((await request('/api/action',{...post,headers:{...post.headers,'X-CSRF-Token':session.csrf,Origin:'https://evil.example'}})).status,403);
+  assert.equal((await request('/api/action',{...post,headers:{...post.headers,Authorization:'Bearer '+token}})).status,403);
+  post.headers['X-CSRF-Token']=session.csrf;r=await request('/api/action',post);assert.equal(r.status,200);
+  assert.equal((await request('/api/action',post)).status,409);
+  assert.equal((await request('/api/action',{...post,body:'{'})).status,400);
+  assert.equal((await request('/api/action',{...post,body:'x'.repeat(30001)})).status,413);
+  assert.equal((await request('/api/action',{...post,headers:{...post.headers,'Content-Type':'text/plain'}})).status,415);
+  for(const path of ['/data/state.json','/runtime/private/board.db','/.env','/private/input.json','/auth.mjs','/package.json'])assert.equal((await request(path,{headers:{Cookie:cookie}})).status,404);
+  assert.equal((await request('/api/auth/register/options',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'})).status,401);
+  assert.equal((await request('/api/auth/login/options',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})).status,403);
+  r=await request('/api/auth/login/options',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:'{}'});assert.equal(r.status,200);const challenge=await r.json();assert.equal(challenge.options.userVerification,'required');
+  assert.equal((await request('/api/auth/login/verify',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({challengeId:challenge.challengeId,response:{id:'unknown'}})})).status,401);
+  assert.equal((await request('/api/auth/logout',{method:'POST',headers:{Cookie:cookie,Origin:origin,'X-CSRF-Token':session.csrf}})).status,200);
+  assert.equal((await request('/api/state',{headers:{Cookie:cookie}})).status,403);
+  const sw=await readFile(new URL('../sw.mjs',import.meta.url),'utf8');assert.ok(!sw.includes('/api/'));assert.ok(!sw.includes('cache.put'));
+ }finally{if(child.exitCode===null){const end=once(child,'exit');child.kill();await end;}await rm(dir,{recursive:true,force:true});}
+});

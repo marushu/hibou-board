@@ -1,0 +1,17 @@
+[Unit]
+Description=Hibou Board
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/hibou-board
+EnvironmentFile=%h/.config/hibou-board/runtime.env
+ExecStart=/usr/bin/env node server.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

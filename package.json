@@ -1,0 +1,19 @@
+{
+  "name": "hibou-board",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs",
+    "build": "node build.mjs",
+    "audit:public": "node scripts/public-audit.mjs"
+  },
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "license": "MIT",
+  "description": "A local-first planning board with fictional demo data",
+  "dependencies": {
+    "@simplewebauthn/server": "^13.3.3"
+  }
+}
