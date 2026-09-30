@@ -75,7 +75,7 @@ const server=http.createServer(async(req,res)=>{
  }catch(e){send(400,{error:e.message});}};
  tail=tail.then(run,run);await tail;return;
  }
- const files={'/':'index.html','/app.mjs':'app.mjs','/login.mjs':'login.mjs','/metadata.mjs':'metadata.mjs','/core.mjs':'core.mjs','/portfolio.mjs':'portfolio.mjs','/style.css':'style.css','/manifest.webmanifest':'manifest.webmanifest','/sw.mjs':'sw.mjs','/icon.svg':'icon.svg','/offline.html':'offline.html'};
+ const files={'/':'index.html','/index.html':'index.html','/app.mjs':'app.mjs','/login.mjs':'login.mjs','/metadata.mjs':'metadata.mjs','/core.mjs':'core.mjs','/portfolio.mjs':'portfolio.mjs','/style.css':'style.css','/manifest.webmanifest':'manifest.webmanifest','/sw.mjs':'sw.mjs','/icon.svg':'icon.svg','/offline.html':'offline.html'};
  if(req.method!=='GET'||!files[pathname])return send(404,{error:'Not found'});
  const f=files[pathname],type=f.endsWith('css')?'text/css':f.endsWith('mjs')?'text/javascript':f.endsWith('svg')?'image/svg+xml':f.endsWith('webmanifest')?'application/manifest+json':'text/html';
  const bytes=await readFile(root+f);res.writeHead(200,{'Content-Type':type});res.end(bytes);

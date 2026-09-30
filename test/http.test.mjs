@@ -7,8 +7,8 @@ test('local HTTP lifecycle: schema migration, assets, edits, mock sync, CAS and 
  async function stop(){if(child.exitCode===null&&child.signalCode===null){const exit=once(child,'exit');child.kill('SIGTERM');await exit;}child=null;}
  try{
  for(const f of ['config.mjs','schema.mjs','auth.mjs','runtime-import.mjs','login.mjs','manifest.webmanifest','sw.mjs','icon.svg','offline.html','server.mjs','core.mjs','metadata.mjs','planning-import.mjs','portfolio.mjs','seed.mjs','index.html','app.mjs','style.css'])await copyFile(new URL(f,root),dir+'/'+f);
- let base=await start();for(const f of ['/','/app.mjs','/core.mjs','/metadata.mjs','/portfolio.mjs','/style.css'])assert.equal((await fetch(base+f)).status,200);
- for(const path of ['/?utm_source=chatgpt.com','/app.mjs?v=1','/style.css?v=1'])assert.equal((await fetch(base+path)).status,200);
+ let base=await start();for(const f of ['/','/index.html','/app.mjs','/core.mjs','/metadata.mjs','/portfolio.mjs','/style.css'])assert.equal((await fetch(base+f)).status,200);
+ for(const path of ['/?utm_source=chatgpt.com','/index.html?v=1','/app.mjs?v=1','/style.css?v=1'])assert.equal((await fetch(base+path)).status,200);
  assert.deepEqual(await(await fetch(base+'/api/auth/session?x=1')).json(),{mode:'demo'});
  assert.equal((await fetch(base+'/missing?x=1')).status,404);
  let s=await(await fetch(base+'/api/state?x=1')).json();assert.equal(s.schemaVersion,3);assert.equal(s.projects.length,4);assert.equal(s.projects.at(-1).stream,'operations');
