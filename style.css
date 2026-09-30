@@ -68,3 +68,49 @@
   .sync-panel p,.event,details,#message:not(:empty){font-size:14px}
   footer{font-size:13px;color:#71647e}
 }
+
+/* Larger reading sizes on phones; wider layouts keep their existing type. */
+@media(max-width:700px){
+  body{font-size:16px;line-height:1.6}
+  main p,.project-card p,.project-card>p:first-of-type,
+  .decision p,.decision li,.sync-panel p,.event,details,
+  .project-card details,.empty,.filters,footer,
+  .notice,dialog p,#message:not(:empty){font-size:16px;line-height:1.6}
+  .badge,.project-card .badge,.task .badge,.local-tag,nav small,
+  .filters span,.sample-summary,.project-card small,.project-card .row,
+  .hint,.legend,.eyebrow,header,.mobile-stats>div>span,.mobile-stats small,
+  .filter-count,.evidence,dialog label,.column h2 small,
+  .section-title>span,.timeline-head{font-size:15px;line-height:1.6}
+  /* Earlier card/evidence rules use !important; override them at the same scope. */
+  .task-top,.task-bottom,.task .evidence,.evidence p,.task .evidence p{
+    font-size:15px!important;line-height:1.6;
+  }
+  .task p{font-size:16px!important;line-height:1.6}
+  .filter-count{font-size:15px}
+  button,.primary,nav button,#logout,.filter-toggle,.filter-toggle>span:last-child,
+  .cross-filters label,.cross-filters button,.project-card>button,
+  .decision button,.section-title>button{font-size:16px;line-height:1.55}
+  button,input,select,summary{min-height:44px}
+  /* WebKit native menus need an explicit height to retain the tap target. */
+  select:not([multiple]){height:44px}
+  summary{padding-block:9px}
+  input,select,dialog input,dialog select,
+  .cross-filters input,.cross-filters select{font-size:17px}
+  .task strong,.decision h2,h3{font-size:18px;line-height:1.6}
+  h2,.project-card h2,.section-title h2{font-size:20px;line-height:1.55}
+  .column h2{font-size:16px}
+  h1{font-size:26px;line-height:1.55}
+  .timeline-label strong{font-size:16px;line-height:1.6}
+  .timeline-label small{font-size:15px;line-height:1.6}
+  .timeline-label{min-height:180px}
+  .timeline-head{height:auto;min-height:58px}
+  .bar{font-size:14px;line-height:1.6;min-height:44px}
+  /* Allow larger labels to wrap without expanding the phone viewport. */
+  nav button{flex-wrap:wrap;overflow-wrap:anywhere}
+  nav small{margin-left:0}
+  .task-top{flex-wrap:wrap}
+  .badge{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+  .cross-filters,.form-grid{grid-template-columns:minmax(0,1fr)}
+  .focus-grid>*{min-width:0}
+  pre{font-size:16px;line-height:1.6}
+}
